@@ -75,12 +75,14 @@ public class ObjectItem extends JPanel{
     private ActionListener popupActionListener = new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-            if (e.getActionCommand().equals("")){
-                // REMOVE etc...
+            if (e.getActionCommand().equals("Remove")){
+                Main.runtimeView.removeObject(ObjectItem.this);
             }else {
-                // Method to execute
                 try {
+
+                    //Invoke Method
                     Main.runtimeView.getDebugger().invokeMethod(className, objectName, e.getActionCommand());
+
                 } catch (InvocationException e1) {
                     e1.printStackTrace();
                 } catch (InvalidTypeException e1) {
@@ -118,11 +120,14 @@ public class ObjectItem extends JPanel{
 
             if (objectReference != null) {
                 JMenuItem item;
-                for (Method m : objectReference.referenceType().methods()) {
-                    item = new JMenuItem(m.name());
+                List<Method> methods = objectReference.referenceType().methods();
+                for (int i = 1; i < methods.size(); i++){
+                    item = new JMenuItem(methods.get(i).name());
                     item.addActionListener(popupActionListener);
                     popupMenu.add(item);
                 }
+
+                popupMenu.add(createJMenuItem("Remove"));
             }else
                 System.out.println("NULL");
 
@@ -133,6 +138,12 @@ public class ObjectItem extends JPanel{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private JMenuItem createJMenuItem(String name){
+        JMenuItem menuItem = new JMenuItem(name);
+        menuItem.addActionListener(popupActionListener);
+        return menuItem;
     }
 
     @Override

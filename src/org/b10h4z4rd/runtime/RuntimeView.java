@@ -5,7 +5,6 @@ import com.sun.jdi.InvalidTypeException;
 import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import org.b10h4z4rd.Main;
 import org.b10h4z4rd.classviewer.ClassItem;
-import org.b10h4z4rd.runtime.debugger.ConnectorNotFoundException;
 import org.b10h4z4rd.runtime.debugger.JVMDebugger;
 
 import javax.swing.*;
@@ -21,18 +20,20 @@ import java.util.Map;
 public class RuntimeView extends JFrame{
 
     private JVMDebugger debugger;
+    private TerminalView tv;
     private Map<String, ObjectItem> objList;
 
-    public RuntimeView(){
-        debugger = new JVMDebugger(new File("/Users/Mathias/Documents/IdeaProjects/PlayIDE/out/production/PlayIDE/"), 7000);
-
+    public RuntimeView(File home) {
+        setLayout(null);
+        debugger = new JVMDebugger(home, 7000);
+        tv = new TerminalView();
         try {
-            debugger.launch(System.out, System.err);
+            debugger.launch(tv.createNewOutputStream(), tv.createNewOutputStream());
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
-        } catch (ConnectorNotFoundException e) {
+        } catch (JVMDebugger.ConnectorNotFoundException e) {
             e.printStackTrace();
         } catch (IllegalConnectorArgumentsException e) {
             e.printStackTrace();
@@ -44,14 +45,22 @@ public class RuntimeView extends JFrame{
         setSize(600, 400);
         getContentPane().setBackground(Color.WHITE);
         setResizable(false);
+        setLocationRelativeTo(null);
         setVisible(true);
+        setAutoRequestFocus(true);
+        setTitle("Java Virtual Machine");
     }
 
     public void addObject(ClassItem classItem, String name){
-        ObjectItem newItem = new ObjectItem(classItem.getClassName(), name);
-        objList.put(name, newItem);
-        add(newItem);
-        repaint();
+        if (!objList.containsKey(name)) {
+            ObjectItem newItem = new ObjectItem(classItem.getClassName(), name);
+            objList.put(name, newItem);
+            newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
+            add(newItem);
+            repaint();
+        }else {
+            JOptionPane.showMessageDialog(null, "An Object with this name already exists!", "ERROR", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public void removeObject(ObjectItem objectItem){
@@ -75,6 +84,7 @@ public class RuntimeView extends JFrame{
     public void dispose() {
         debugger.exit();
         Main.runtimeView = null;
+        tv.dispose();
         super.dispose();
     }
 }

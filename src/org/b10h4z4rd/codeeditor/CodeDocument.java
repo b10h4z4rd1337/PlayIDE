@@ -403,8 +403,8 @@ public class CodeDocument extends DefaultStyledDocument {
         processChar(str);
     }
 
-    public void insertString(int offs, String str, AttributeSet a)
-            throws BadLocationException {
+    @Override
+    public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
         super.insertString(offs, str, normal);
 
         int strLen = str.length();

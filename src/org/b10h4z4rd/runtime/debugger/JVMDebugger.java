@@ -4,7 +4,6 @@ import com.sun.jdi.*;
 import com.sun.jdi.connect.AttachingConnector;
 import com.sun.jdi.connect.Connector;
 import com.sun.jdi.connect.IllegalConnectorArgumentsException;
-import jlibs.core.lang.JavaProcessBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +26,8 @@ public class JVMDebugger {
         this.port = port;
         javaProcessBuilder = new JavaProcessBuilder();
         javaProcessBuilder.workingDir(workingDir);
+        javaProcessBuilder.classpath(workingDir);
+        javaProcessBuilder.classpath(new File("*"));
         javaProcessBuilder.mainClass(RuntimeServer.class.getName());
         javaProcessBuilder.debugPort(7000);
     }
@@ -108,4 +109,5 @@ public class JVMDebugger {
         javaProcess.destroy();
     }
 
+    public static class ConnectorNotFoundException extends Exception {}
 }

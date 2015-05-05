@@ -8,16 +8,15 @@ import javax.swing.*;
 public class Main {
 
     public static RuntimeView runtimeView = null;
+    public static ClassView classView = null;
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setSize(600, 400);
-        ClassView classView = new ClassView();
-        classView.setSize(600, 400);
-        frame.setContentPane(classView);
-        frame.setResizable(false);
-        frame.setVisible(true);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                classView = new ClassView();
+            }
+        });
     }
 
     public static void Print(Object toPrint){

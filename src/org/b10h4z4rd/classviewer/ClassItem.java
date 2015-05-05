@@ -6,24 +6,41 @@ import org.b10h4z4rd.runtime.RuntimeView;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Created by Mathias on 01.05.15.
  */
-public class ClassItem extends JPanel {
+public class ClassItem extends JPanel implements Serializable{
+
+    public static final long serialVersionUID = 432658292L;
 
     public static final int WIDTH = 100, HEIGHT = 75;
-    public static String NEW_INSTANCE;
+    private String NEW_INSTANCE;
 
     private String className;
+    private File javaFile, projectLocation;
     private JLabel classNameLabel;
 
     private JPopupMenu popupMenu;
     private int pressedX, pressedY;
 
-    public ClassItem(String name){
+    public ClassItem(String name, File home){
         this.className = name;
-        NEW_INSTANCE = "new " + name;
+        this.projectLocation = home;
+        this.javaFile = new File(home, name + ".java");
+        try {
+            javaFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        initControls();
+    }
+
+    public void initControls(){
+        NEW_INSTANCE = "new " + className;
         setLayout(null);
         setSize(WIDTH, HEIGHT);
         classNameLabel = new JLabel(className);
@@ -32,32 +49,38 @@ public class ClassItem extends JPanel {
 
         popupMenu = new JPopupMenu();
         JMenuItem item = new JMenuItem(NEW_INSTANCE);
-        item.addActionListener(popupActionListener);
+        item.addActionListener(new PopupActionListener());
         popupMenu.add(item);
 
-        addMouseListener(customMouseAdapter);
-        addMouseMotionListener(panelMover);
+        addMouseListener(new CustomMouseAdapter());
+        addMouseMotionListener(new PanelMover());
+    }
+
+    public void compile(){
+        Main.classView.compile();
     }
 
     private void openCoderFrame(){
         new org.b10h4z4rd.codeeditor.CodeEditor(this);
     }
 
-    private ActionListener popupActionListener = new ActionListener() {
+    private class PopupActionListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (e.getActionCommand().equals(NEW_INSTANCE)){
-                if (Main.runtimeView == null)
-                    Main.runtimeView = new RuntimeView();
+                String name = JOptionPane.showInputDialog(null, "Enter an Object name:");
 
-                Main.runtimeView.addObject(ClassItem.this, "aaa");
+                if (name != null && !name.isEmpty()) {
+                    if (Main.runtimeView == null)
+                        Main.runtimeView = new RuntimeView(projectLocation);
+
+                    Main.runtimeView.addObject(ClassItem.this, name);
+                }
             }
         }
-
-
     };
 
-    private MouseMotionAdapter panelMover = new MouseMotionAdapter(){
+    private class PanelMover extends MouseMotionAdapter{
         @Override
         public void mouseDragged(MouseEvent e) {
             e.translatePoint(e.getComponent().getLocation().x - pressedX, e.getComponent().getLocation().y - pressedY);
@@ -92,7 +115,7 @@ public class ClassItem extends JPanel {
         }
     };
 
-    private MouseAdapter customMouseAdapter = new MouseAdapter(){
+    private class CustomMouseAdapter extends MouseAdapter{
         @Override
         public void mouseClicked(MouseEvent e) {
             if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 2) {
@@ -123,5 +146,9 @@ public class ClassItem extends JPanel {
 
     public String getClassName() {
         return className;
+    }
+
+    public File getJavaFile() {
+        return javaFile;
     }
 }

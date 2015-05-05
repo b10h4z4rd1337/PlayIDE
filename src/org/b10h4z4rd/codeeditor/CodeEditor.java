@@ -3,12 +3,15 @@ package org.b10h4z4rd.codeeditor;
 import org.b10h4z4rd.classviewer.ClassItem;
 
 import javax.swing.*;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.TabSet;
+import javax.swing.text.TabStop;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,17 +20,34 @@ import java.util.Map;
  */
 public class CodeEditor extends JFrame implements ActionListener{
 
-    private JTextArea editor;
+    private JTextPane editor;
     private ClassItem classItem;
-    private File sourceFile;
 
     public CodeEditor(ClassItem classItem){
         this.classItem = classItem;
-        this.editor = new JTextArea();
-        this.sourceFile = new File(classItem.getClassName() + ".java");
-        JMenuBar menu = new JMenuBar();
+        this.editor = new JTextPane();
         initCodeArea();
 
+        // Set Tab Size
+        FontMetrics fm = editor.getFontMetrics( editor.getFont() );
+        int charWidth = fm.charWidth( 'w' );
+        int tabWidth = charWidth * 4;
+
+        TabStop[] tabs = new TabStop[10];
+
+        for (int j = 0; j < tabs.length; j++)
+        {
+            int tab = j + 1;
+            tabs[j] = new TabStop( tab * tabWidth );
+        }
+
+        TabSet tabSet = new TabSet(tabs);
+        SimpleAttributeSet attributes = new SimpleAttributeSet();
+        StyleConstants.setTabSet(attributes, tabSet);
+        int length = editor.getDocument().getLength();
+        editor.getStyledDocument().setParagraphAttributes(0, length, attributes, true);
+
+        JMenuBar menu = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
 
         JMenuItem compileItem = new JMenuItem("Compile");
@@ -41,11 +61,14 @@ public class CodeEditor extends JFrame implements ActionListener{
         menu.add(fileMenu);
         menu.add(compileItem);
 
+        load();
+
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setSize(600, 600);
         add(menu, BorderLayout.NORTH);
         add(new JScrollPane(editor), BorderLayout.CENTER);
         setVisible(true);
+        setTitle(classItem.getJavaFile().getName());
     }
 
     private void initCodeArea(){
@@ -119,23 +142,42 @@ public class CodeEditor extends JFrame implements ActionListener{
             save();
         }else if (e.getActionCommand().equals("Compile")){
             save();
-            try {
-                org.b10h4z4rd.Compiler.compile(sourceFile);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
+            classItem.compile();
         }
+    }
+
+    @Override
+    public void dispose() {
+        save();
+        super.dispose();
     }
 
     private void save(){
         try {
-            FileOutputStream fos = new FileOutputStream(sourceFile);
+            FileOutputStream fos = new FileOutputStream(classItem.getJavaFile());
             byte[] data = editor.getText().getBytes();
             fos.write(data);
             fos.flush();
             fos.close();
         }catch (Exception e){
-            JOptionPane.showMessageDialog(null, "Failed to save file!", "An error occrued!", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Failed to save file!", "An error occurred!", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void load(){
+        try {
+            FileInputStream fis = new FileInputStream(classItem.getJavaFile());
+            StringBuilder sb = new StringBuilder();
+
+            byte[] buffer = new byte[1024 * 10];
+            int len;
+            while ((len = fis.read(buffer)) != -1)
+                sb.append(new String(buffer, 0, len));
+
+            editor.setText(sb.toString());
+            fis.close();
+        } catch (java.io.IOException e) {
+            JOptionPane.showMessageDialog(null, "Failed to open file!", "An error occurred!", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

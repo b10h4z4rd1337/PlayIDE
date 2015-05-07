@@ -9,6 +9,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +24,6 @@ public class ClassView extends JFrame {
     private JPopupMenu popupMenu;
     private int clickedX, clickedY;
 
-    private JFileChooser fileChooser;
     private Project project;
     private File projectLocation;
 
@@ -30,7 +31,7 @@ public class ClassView extends JFrame {
         setLayout(null);
         popupMenu = new JPopupMenu();
         JMenuItem item = new JMenuItem(CREATE_FILE);
-        item.addActionListener(popupActionListener);
+        item.addActionListener(new PopupActionListener());
         popupMenu.add(item);
 
         JMenuBar menu = new JMenuBar();
@@ -46,7 +47,7 @@ public class ClassView extends JFrame {
 
         setJMenuBar(menu);
 
-        addMouseListener(customMouseAdapter);
+        addMouseListener(new CustomMouseAdapter());
 
         getContentPane().setBackground(Color.WHITE);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -58,7 +59,7 @@ public class ClassView extends JFrame {
 
     private JMenuItem createJMenuItem(String name){
         JMenuItem res = new JMenuItem(name);
-        res.addActionListener(menuActionListener);
+        res.addActionListener(new MenuActionListener());
         return res;
     }
 
@@ -67,14 +68,14 @@ public class ClassView extends JFrame {
             FileInputStream fis = new FileInputStream(projectLocation);
             project = (Project) new ObjectInputStream(fis).readObject();
             fis.close();
+            URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{projectLocation.getParentFile().toURI().toURL()});
             for (ClassItem ci : project.getClassItemList()) {
                 ci.initControls();
                 getContentPane().add(ci);
+                urlClassLoader.loadClass(ci.getClassName());
             }
             repaint();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
@@ -82,7 +83,8 @@ public class ClassView extends JFrame {
     private void saveProject(){
         try {
             if (!projectLocation.exists())
-                projectLocation.createNewFile();
+                if (!projectLocation.createNewFile())
+                    JOptionPane.showMessageDialog(this, "Project could not be created!", "ERROR", JOptionPane.ERROR_MESSAGE);
             FileOutputStream fos = new FileOutputStream(projectLocation);
             new ObjectOutputStream(fos).writeObject(project);
             fos.flush();
@@ -92,11 +94,11 @@ public class ClassView extends JFrame {
         }
     }
 
-    private ActionListener menuActionListener = new ActionListener() {
+    private class MenuActionListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
+            JFileChooser fileChooser = new JFileChooser();
             if (e.getActionCommand().equals(NEW_PROJECT)){
-                fileChooser = new JFileChooser();
                 fileChooser.showDialog(ClassView.this, "Create");
                 if (fileChooser.getSelectedFile() != null) {
                     project = new Project(fileChooser.getSelectedFile().getName());
@@ -105,7 +107,6 @@ public class ClassView extends JFrame {
                     setTitle(fileChooser.getSelectedFile().getName() + ".playproject");
                 }
             }else if (e.getActionCommand().equals(OPEN_PROJECT)){
-                fileChooser = new JFileChooser();
                 fileChooser.addChoosableFileFilter(new javax.swing.filechooser.FileFilter() {
                     @Override
                     public boolean accept(File f) {
@@ -130,10 +131,10 @@ public class ClassView extends JFrame {
                 compile();
             }
         }
-    };
+    }
 
     public void compile(){
-        List<File> toCompile = new ArrayList<File>();
+        List<File> toCompile = new ArrayList<>();
         for (ClassItem ci : project.getClassItemList())
             toCompile.add(ci.getJavaFile());
         try {
@@ -143,7 +144,7 @@ public class ClassView extends JFrame {
         }
     }
 
-    private ActionListener popupActionListener = new ActionListener(){
+    private class PopupActionListener implements ActionListener{
         @Override
         public void actionPerformed(ActionEvent e) {
             if (e.getActionCommand().equals(CREATE_FILE)) {
@@ -158,7 +159,7 @@ public class ClassView extends JFrame {
                 }
             }
         }
-    };
+    }
 
     private boolean existsClass(String name) {
         for (ClassItem ci : project.getClassItemList())
@@ -167,7 +168,7 @@ public class ClassView extends JFrame {
         return false;
     }
 
-    private MouseAdapter customMouseAdapter = new MouseAdapter(){
+    private class CustomMouseAdapter extends MouseAdapter{
         @Override
         public void mouseClicked(MouseEvent e) {
             if (e.getButton() == MouseEvent.BUTTON3){
@@ -178,7 +179,7 @@ public class ClassView extends JFrame {
                 }
             }
         }
-    };
+    }
 
     @Override
     public void dispose() {

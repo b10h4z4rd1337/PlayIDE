@@ -1,7 +1,6 @@
 package org.b10h4z4rd.runtime;
 
-import com.sun.jdi.ClassNotLoadedException;
-import com.sun.jdi.InvalidTypeException;
+import com.sun.jdi.*;
 import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import org.b10h4z4rd.Main;
 import org.b10h4z4rd.classviewer.ClassItem;
@@ -29,17 +28,11 @@ public class RuntimeView extends JFrame{
         tv = new TerminalView();
         try {
             debugger.launch(tv.createNewOutputStream(), tv.createNewOutputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (JVMDebugger.ConnectorNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalConnectorArgumentsException e) {
+        } catch (IOException | InterruptedException | JVMDebugger.ConnectorNotFoundException | IllegalConnectorArgumentsException e) {
             e.printStackTrace();
         }
 
-        objList = new HashMap<String, ObjectItem>();
+        objList = new HashMap<>();
 
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setSize(600, 400);
@@ -51,29 +44,49 @@ public class RuntimeView extends JFrame{
         setTitle("Java Virtual Machine");
     }
 
-    public void addObject(ClassItem classItem, String name){
-        if (!objList.containsKey(name)) {
-            ObjectItem newItem = new ObjectItem(classItem.getClassName(), name);
-            objList.put(name, newItem);
-            newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
-            add(newItem);
-            repaint();
+    public void newObject(ClassItem classItem, String objName){
+        if (!objList.containsKey(objName)) {
+            Method constructor = null;
+            try {
+                constructor = debugger.loadClass(classItem.getClassName()).methodsByName("<init>").get(0);
+            } catch (InvalidTypeException | ClassNotLoadedException | InvocationException | IncompatibleThreadStateException e) {
+                e.printStackTrace();
+            }
+            if (HelperUtils.needsArguments(constructor))
+                new ParameterInputView(classItem.getClassName(), objName);
+            else {
+                ObjectItem newItem = new ObjectItem(classItem.getClassName(), objName);
+                objList.put(objName, newItem);
+                newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
+                add(newItem);
+                repaint();
+            }
         }else {
             JOptionPane.showMessageDialog(null, "An Object with this name already exists!", "ERROR", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    public void addObject(String objName, ObjectReference or){
+        ObjectItem newItem = new ObjectItem(objName, or);
+        objList.put(objName, newItem);
+        newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
+        add(newItem);
+        repaint();
+    }
+
     public void removeObject(ObjectItem objectItem){
         try {
-            debugger.removeObject(objectItem.getObjectName());
+            debugger.removeObject(objectItem.getObjectReference());
             objList.remove(objectItem.getObjectName());
             remove(objectItem);
             repaint();
-        } catch (InvalidTypeException e) {
-            e.printStackTrace();
-        } catch (ClassNotLoadedException e) {
+        } catch (InvalidTypeException | ClassNotLoadedException e) {
             e.printStackTrace();
         }
+    }
+
+    public Map<String, ObjectItem> getObjList(){
+        return objList;
     }
 
     public JVMDebugger getDebugger(){
@@ -82,7 +95,11 @@ public class RuntimeView extends JFrame{
 
     @Override
     public void dispose() {
-        debugger.exit();
+        try {
+            debugger.exit();
+        } catch (ClassNotLoadedException | IncompatibleThreadStateException | InvalidTypeException e) {
+            e.printStackTrace();
+        }
         Main.runtimeView = null;
         tv.dispose();
         super.dispose();

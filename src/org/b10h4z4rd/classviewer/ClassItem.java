@@ -71,14 +71,15 @@ public class ClassItem extends JPanel implements Serializable{
                 String name = JOptionPane.showInputDialog(null, "Enter an Object name:");
 
                 if (name != null && !name.isEmpty()) {
-                    if (Main.runtimeView == null)
+                    if (Main.runtimeView == null) {
                         Main.runtimeView = new RuntimeView(projectLocation);
+                    }
 
-                    Main.runtimeView.addObject(ClassItem.this, name);
+                    Main.runtimeView.newObject(ClassItem.this, name);
                 }
             }
         }
-    };
+    }
 
     private class PanelMover extends MouseMotionAdapter{
         @Override
@@ -113,7 +114,7 @@ public class ClassItem extends JPanel implements Serializable{
         public void mouseMoved(MouseEvent e) {
             super.mouseMoved(e);
         }
-    };
+    }
 
     private class CustomMouseAdapter extends MouseAdapter{
         @Override
@@ -132,7 +133,7 @@ public class ClassItem extends JPanel implements Serializable{
                 pressedY = e.getY();
             }
         }
-    };
+    }
 
     @Override
     public void paintComponent(Graphics g) {

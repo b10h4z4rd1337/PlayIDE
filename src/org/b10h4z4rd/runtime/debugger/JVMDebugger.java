@@ -4,10 +4,13 @@ import com.sun.jdi.*;
 import com.sun.jdi.connect.AttachingConnector;
 import com.sun.jdi.connect.Connector;
 import com.sun.jdi.connect.IllegalConnectorArgumentsException;
+import com.sun.jdi.request.BreakpointRequest;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,6 +20,7 @@ public class JVMDebugger {
 
     private VirtualMachine vm;
     private ThreadReference workerThread;
+    private BreakpointRequest breakpoint;
     public static ClassType SERVER_CLASS;
     private JavaProcessBuilder javaProcessBuilder;
     private Process javaProcess;
@@ -27,7 +31,7 @@ public class JVMDebugger {
         javaProcessBuilder = new JavaProcessBuilder();
         javaProcessBuilder.workingDir(workingDir);
         javaProcessBuilder.classpath(workingDir);
-        javaProcessBuilder.classpath(new File("*"));
+        javaProcessBuilder.classpath(new File("/Users/Mathias/Documents/IdeaProjects/PlayIDE/out/production/PlayIDE/"));
         javaProcessBuilder.mainClass(RuntimeServer.class.getName());
         javaProcessBuilder.debugPort(7000);
     }
@@ -53,59 +57,72 @@ public class JVMDebugger {
         params.get("port").setValue(String.valueOf(port));
         vm = connector.attach(params);
         SERVER_CLASS = (ClassType) vm.classesByName(RuntimeServer.class.getName()).get(0);
+        breakpoint = vm.eventRequestManager().createBreakpointRequest(SERVER_CLASS.methodsByName("vmSuspendBreakPoint").get(0).location());
+        breakpoint.disable();
+        workerThread = findMainThread();
     }
 
-    private void setStaticField(ClassType classType, String fieldName, Value value) throws ClassNotLoadedException, InvalidTypeException {
-        classType.setValue(classType.fieldByName(fieldName), value);
+    private ThreadReference findMainThread(){
+        for (ThreadReference tr : vm.allThreads())
+            if (tr.name().equals("main"))
+                return tr;
+        return null;
     }
 
-    private Value getStaticField(ClassType classType, String fieldName){
-        return classType.getValue(classType.fieldByName(fieldName));
+    public ClassType loadClass(String className) throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException {
+        breakpoint.enable();
+        List<Value> list = new ArrayList<>();
+        list.add(vm.mirrorOf(className));
+        Value result = SERVER_CLASS.invokeMethod(workerThread, SERVER_CLASS.methodsByName("loadClass").get(0), list, ObjectReference.INVOKE_SINGLE_THREADED);
+        return (ClassType) ((ClassObjectReference) result).reflectedType();
     }
 
-    public ObjectReference instantiateClass(String className, String objectName) throws InvalidTypeException, ClassNotLoadedException, InterruptedException {
-        vm.suspend();
-        setStaticField(SERVER_CLASS, RuntimeServer.OPERATION, vm.mirrorOf(RuntimeServer.CREATE_OBJECT));
-        setStaticField(SERVER_CLASS, RuntimeServer.CLASS_TO_USE, vm.mirrorOf(className));
-        setStaticField(SERVER_CLASS, RuntimeServer.OBJECT_NAME, vm.mirrorOf(objectName));
-        vm.resume();
-
-        Thread.sleep(10);
-
-        return (ObjectReference) getReturn();
+    public Value stringToValue(Class<?> clazz, String value){
+        if ( Boolean.class == clazz ) return vm.mirrorOf(Boolean.parseBoolean(value));
+        if ( Byte.class == clazz ) return vm.mirrorOf(Byte.parseByte(value));
+        if ( Character.class == clazz) return vm.mirrorOf(value.charAt(0));
+        if ( Short.class == clazz ) return vm.mirrorOf(Short.parseShort(value));
+        if ( Integer.class == clazz ) return vm.mirrorOf(Integer.parseInt(value));
+        if ( Long.class == clazz ) return vm.mirrorOf(Long.parseLong(value));
+        if ( Float.class == clazz ) return vm.mirrorOf(Float.parseFloat(value));
+        if ( Double.class == clazz ) return vm.mirrorOf(Double.parseDouble(value));
+        return vm.mirrorOf(value);
     }
 
-    public Value invokeMethod(String className, String objectName, String methodName) throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException, InterruptedException {
-        vm.suspend();
-        setStaticField(SERVER_CLASS, RuntimeServer.OPERATION, vm.mirrorOf(RuntimeServer.EXECUTE_METHOD));
-        setStaticField(SERVER_CLASS, RuntimeServer.CLASS_TO_USE, vm.mirrorOf(className));
-        if (objectName == null)
-            objectName = "";
-        setStaticField(SERVER_CLASS, RuntimeServer.OBJECT_NAME, vm.mirrorOf(objectName));
-        setStaticField(SERVER_CLASS, RuntimeServer.METHOD_TO_INVOKE, vm.mirrorOf(methodName));
-        vm.resume();
+    public ObjectReference instantiateClass(String className, Method method, List<Value> params) throws InvalidTypeException, ClassNotLoadedException, InterruptedException {
+        ClassType ct = (ClassType) vm.classesByName(className).get(0);
+        breakpoint.enable();
+        ObjectReference or = null;
+        try {
+            or = ct.newInstance(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
+            or.disableCollection();
+        } catch (IncompatibleThreadStateException | InvocationException e) {
+            e.printStackTrace();
+        }
 
-        Thread.sleep(10);
+        breakpoint.disable();
 
-        return getReturn();
+        return or;
     }
 
-    public void removeObject(String name) throws InvalidTypeException, ClassNotLoadedException {
-        setStaticField(SERVER_CLASS, RuntimeServer.OPERATION, vm.mirrorOf(RuntimeServer.REMOVE_OBJECT));
+    public Value invokeMethod(ObjectReference objectReference, Method method, List<Value> params) throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException, InterruptedException {
+        breakpoint.enable();
+
+        Value result = objectReference.invokeMethod(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
+
+        breakpoint.disable();
+
+        return result;
     }
 
-    private Value getReturn(){
-        vm.suspend();
-        Value value = getStaticField(SERVER_CLASS, RuntimeServer.RETURNVAL);
-        vm.resume();
-        return value;
+    public void removeObject(ObjectReference objectReference) throws InvalidTypeException, ClassNotLoadedException {
+        objectReference.enableCollection();
     }
 
-    public void exit(){
+    public void exit() throws ClassNotLoadedException, IncompatibleThreadStateException, InvalidTypeException {
+        breakpoint.enable();
+        workerThread.forceEarlyReturn(vm.mirrorOfVoid());
         vm.exit(0);
-    }
-
-    public void kill(){
         javaProcess.destroy();
     }
 

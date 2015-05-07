@@ -56,7 +56,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ classpath ]---------------------------------------------------*/
 
-    private List<File> classpath = new ArrayList<File>();
+    private List<File> classpath = new ArrayList<>();
 
     public JavaProcessBuilder classpath(String resource){
         return classpath(new File(resource));
@@ -73,7 +73,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ endorsed-dirs ]---------------------------------------------------*/
 
-    private List<File> endorsedDirs = new ArrayList<File>();
+    private List<File> endorsedDirs = new ArrayList<>();
 
     public JavaProcessBuilder endorsedDir(String dir){
         return endorsedDir(new File(dir));
@@ -470,36 +470,32 @@ public class JavaProcessBuilder{
         return cmd.toArray(new String[cmd.size()]);
     }
 
-    public Process launch(final OutputStream output, final OutputStream error) throws IOException {
-        final Process process = Runtime.getRuntime().exec(command(), null, workingDir);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                byte[] buffer = new byte[1024];
-                int len;
-                InputStream is = process.getInputStream();
-                try{
-                    while ((len = is.read(buffer)) != -1)
-                        output.write(buffer, 0, len);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+    public Process launch() throws IOException {
+        return Runtime.getRuntime().exec(command(), null, workingDir);
+    }
+
+    public static void redirectStreams(Process process, OutputStream output, OutputStream error){
+        new Thread(() -> {
+            byte[] buffer = new byte[1024];
+            int len;
+            InputStream is = process.getInputStream();
+            try{
+                while ((len = is.read(buffer)) != -1)
+                    output.write(buffer, 0, len);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }).start();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                byte[] buffer = new byte[1024];
-                int len;
-                InputStream is = process.getErrorStream();
-                try{
-                    while ((len = is.read(buffer)) != -1)
-                        error.write(buffer, 0, len);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        new Thread(() -> {
+            byte[] buffer = new byte[1024];
+            int len;
+            InputStream is = process.getErrorStream();
+            try{
+                while ((len = is.read(buffer)) != -1)
+                    error.write(buffer, 0, len);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }).start();
-        return process;
     }
 }

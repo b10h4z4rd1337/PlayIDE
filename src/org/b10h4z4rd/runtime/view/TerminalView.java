@@ -1,4 +1,4 @@
-package org.b10h4z4rd.runtime;
+package org.b10h4z4rd.runtime.view;
 
 import javax.swing.*;
 import java.awt.*;

@@ -1,38 +1,39 @@
 package org.b10h4z4rd.classviewer;
 
+import com.sun.jdi.*;
 import org.b10h4z4rd.Main;
-import org.b10h4z4rd.runtime.RuntimeView;
+import org.b10h4z4rd.runtime.HelperUtils;
+import org.b10h4z4rd.runtime.view.RuntimeView;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
+import java.util.*;
 
 /**
  * Created by Mathias on 01.05.15.
  */
-public class ClassItem extends JPanel implements Serializable{
-
-    public static final long serialVersionUID = 432658292L;
+public class ClassItem extends JPanel{
 
     public static final int WIDTH = 100, HEIGHT = 75;
-    private String NEW_INSTANCE;
 
     private String className;
-    private File javaFile, projectLocation;
-    private JLabel classNameLabel;
+    transient private File javaFile;
+    transient private JLabel classNameLabel;
+    transient Map<String, Method> constructorList;
 
-    private JPopupMenu popupMenu;
-    private int pressedX, pressedY;
+    transient private JPopupMenu popupMenu;
+    transient private PopupActionListener popupActionListener;
+    transient private int pressedX, pressedY;
 
-    public ClassItem(String name, File home){
+    public ClassItem(String name){
         this.className = name;
-        this.projectLocation = home;
-        this.javaFile = new File(home, name + ".java");
+        this.javaFile = new File(Main.classView.getProjectFolder(), className + ".java");
         try {
-            javaFile.createNewFile();
+            if (!javaFile.createNewFile())
+                JOptionPane.showMessageDialog(null, "Could not create File", "ERROR", JOptionPane.ERROR_MESSAGE);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -40,24 +41,58 @@ public class ClassItem extends JPanel implements Serializable{
     }
 
     public void initControls(){
-        NEW_INSTANCE = "new " + className;
         setLayout(null);
         setSize(WIDTH, HEIGHT);
+        if (javaFile == null)
+            this.javaFile = new File(Main.classView.getProjectFolder(), className + ".java");
         classNameLabel = new JLabel(className);
         classNameLabel.setLocation(WIDTH / 2, HEIGHT / 2);
         add(classNameLabel);
 
         popupMenu = new JPopupMenu();
-        JMenuItem item = new JMenuItem(NEW_INSTANCE);
-        item.addActionListener(new PopupActionListener());
+        popupActionListener = new PopupActionListener();
+
+        JMenuItem item = new JMenuItem("Remove");
+        item.setForeground(Color.RED);
+        item.addActionListener(popupActionListener);
         popupMenu.add(item);
 
         addMouseListener(new CustomMouseAdapter());
         addMouseMotionListener(new PanelMover());
     }
 
-    public void compile(){
-        Main.classView.compile();
+    public void reloadConstructors() {
+        try {
+            ClassType ct = Main.debugger.loadClass(className);
+            java.util.List<Method> constructors = HelperUtils.getConstructors(ct.methods());
+            constructorList = HelperUtils.makeMap(HelperUtils.methodsToString(constructors), constructors);
+            popupMenu = new JPopupMenu();
+
+            JMenuItem item;
+            for (String s : constructorList.keySet()) {
+                item = new JMenuItem(s);
+                item.addActionListener(popupActionListener);
+                popupMenu.add(item);
+            }
+            item = new JMenuItem("Remove");
+            item.setForeground(Color.RED);
+            item.addActionListener(popupActionListener);
+            popupMenu.add(item);
+        } catch (InvocationException | InvalidTypeException | ClassNotLoadedException | IncompatibleThreadStateException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void delete() {
+        if (!javaFile.delete()) {
+            JOptionPane.showMessageDialog(null, "Failed to remove!", "ERROR", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (!new File(Main.classView.getProjectFolder(), className + ".class").delete()) {
+            JOptionPane.showMessageDialog(null, "Failed to remove!", "ERROR", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        Main.classView.removeItem(this);
     }
 
     private void openCoderFrame(){
@@ -67,15 +102,21 @@ public class ClassItem extends JPanel implements Serializable{
     private class PopupActionListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            if (e.getActionCommand().equals(NEW_INSTANCE)){
+            if (e.getActionCommand().equals("Remove")){
+                delete();
+            }else {
                 String name = JOptionPane.showInputDialog(null, "Enter an Object name:");
 
                 if (name != null && !name.isEmpty()) {
                     if (Main.runtimeView == null) {
-                        Main.runtimeView = new RuntimeView(projectLocation);
+                        Main.runtimeView = new RuntimeView();
                     }
-
-                    Main.runtimeView.newObject(ClassItem.this, name);
+                    try {
+                        Main.debugger.loadClass(className);
+                        Main.runtimeView.newObject(ClassItem.this, constructorList.get(e.getActionCommand()), name);
+                    } catch (InvocationException | InvalidTypeException | ClassNotLoadedException | IncompatibleThreadStateException e1) {
+                        e1.printStackTrace();
+                    }
                 }
             }
         }

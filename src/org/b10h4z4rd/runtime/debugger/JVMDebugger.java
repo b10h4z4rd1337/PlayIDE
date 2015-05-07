@@ -5,6 +5,7 @@ import com.sun.jdi.connect.AttachingConnector;
 import com.sun.jdi.connect.Connector;
 import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import com.sun.jdi.request.BreakpointRequest;
+import org.b10h4z4rd.Main;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +27,7 @@ public class JVMDebugger {
     private Process javaProcess;
     private int port;
 
-    public JVMDebugger(File workingDir, int port){
+    public JVMDebugger(File workingDir, int port) throws IOException, ConnectorNotFoundException, IllegalConnectorArgumentsException, InterruptedException {
         this.port = port;
         javaProcessBuilder = new JavaProcessBuilder();
         javaProcessBuilder.workingDir(workingDir);
@@ -34,10 +35,7 @@ public class JVMDebugger {
         javaProcessBuilder.classpath(new File("/Users/Mathias/Documents/IdeaProjects/PlayIDE/out/production/PlayIDE/"));
         javaProcessBuilder.mainClass(RuntimeServer.class.getName());
         javaProcessBuilder.debugPort(7000);
-    }
-
-    public void launch(OutputStream output, OutputStream error) throws IOException, InterruptedException, ConnectorNotFoundException, IllegalConnectorArgumentsException {
-        javaProcess = javaProcessBuilder.launch(output, error);
+        javaProcess = javaProcessBuilder.launch();
 
         // Give the new JVM time to set up before we attach!
         Thread.sleep(100);
@@ -58,8 +56,12 @@ public class JVMDebugger {
         vm = connector.attach(params);
         SERVER_CLASS = (ClassType) vm.classesByName(RuntimeServer.class.getName()).get(0);
         breakpoint = vm.eventRequestManager().createBreakpointRequest(SERVER_CLASS.methodsByName("vmSuspendBreakPoint").get(0).location());
-        breakpoint.disable();
+        breakpoint.enable();
         workerThread = findMainThread();
+    }
+
+    public void redirectStreams(OutputStream output, OutputStream error){
+        JavaProcessBuilder.redirectStreams(javaProcess, output, error);
     }
 
     private ThreadReference findMainThread(){
@@ -70,7 +72,6 @@ public class JVMDebugger {
     }
 
     public ClassType loadClass(String className) throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException {
-        breakpoint.enable();
         List<Value> list = new ArrayList<>();
         list.add(vm.mirrorOf(className));
         Value result = SERVER_CLASS.invokeMethod(workerThread, SERVER_CLASS.methodsByName("loadClass").get(0), list, ObjectReference.INVOKE_SINGLE_THREADED);
@@ -91,7 +92,6 @@ public class JVMDebugger {
 
     public ObjectReference instantiateClass(String className, Method method, List<Value> params) throws InvalidTypeException, ClassNotLoadedException, InterruptedException {
         ClassType ct = (ClassType) vm.classesByName(className).get(0);
-        breakpoint.enable();
         ObjectReference or = null;
         try {
             or = ct.newInstance(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
@@ -100,19 +100,12 @@ public class JVMDebugger {
             e.printStackTrace();
         }
 
-        breakpoint.disable();
-
         return or;
     }
 
     public Value invokeMethod(ObjectReference objectReference, Method method, List<Value> params) throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException, InterruptedException {
-        breakpoint.enable();
 
-        Value result = objectReference.invokeMethod(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
-
-        breakpoint.disable();
-
-        return result;
+        return objectReference.invokeMethod(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
     }
 
     public void removeObject(ObjectReference objectReference) throws InvalidTypeException, ClassNotLoadedException {
@@ -124,6 +117,12 @@ public class JVMDebugger {
         workerThread.forceEarlyReturn(vm.mirrorOfVoid());
         vm.exit(0);
         javaProcess.destroy();
+        Main.debugger = null;
+    }
+
+    public void restart() throws ClassNotLoadedException, IncompatibleThreadStateException, InvalidTypeException {
+        exit();
+        Main.classView.initVM();
     }
 
     public static class ConnectorNotFoundException extends Exception {}

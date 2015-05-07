@@ -1,6 +1,4 @@
-package org.b10h4z4rd.projectmanager;
-
-import org.b10h4z4rd.classviewer.ClassItem;
+package org.b10h4z4rd.classviewer;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -12,17 +10,10 @@ import java.util.List;
 public class Project implements Serializable {
 
     public static final long serialVersionUID = 4832632847L;
-
-    private String projectName;
     private List<ClassItem> classItemList;
 
-    public Project(String name){
-        this.projectName = name;
-        this.classItemList = new ArrayList<ClassItem>();
-    }
-
-    public String getProjectName() {
-        return projectName;
+    public Project(){
+        this.classItemList = new ArrayList<>();
     }
 
     public List<ClassItem> getClassItemList() {

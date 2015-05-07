@@ -1,4 +1,4 @@
-package org.b10h4z4rd.runtime;
+package org.b10h4z4rd.runtime.view;
 
 import com.sun.jdi.*;
 import org.b10h4z4rd.Main;
@@ -23,11 +23,12 @@ public class ParameterInputView extends JFrame {
     private List<String> classes;
     private Object[][] data;
 
-    public ParameterInputView(String className, String objectName){
+    public ParameterInputView(String className, Method method, String objectName){
         this.className = className;
         this.objectName = objectName;
+        this.method = method;
         classes = new ArrayList<>();
-        debugger = Main.runtimeView.getDebugger();
+        debugger = Main.debugger;
 
         try {
             debugger.loadClass(className);
@@ -42,7 +43,7 @@ public class ParameterInputView extends JFrame {
         this.objectItem = objectItem;
         this.method = method;
 
-        debugger = Main.runtimeView.getDebugger();
+        debugger = Main.debugger;
 
         try {
             init();
@@ -135,8 +136,8 @@ public class ParameterInputView extends JFrame {
                         values.add(debugger.stringToValue(Class.forName(classes.get(i)), (String) data[i][1]));
                 }
 
-                if (method == null) {
-                    ObjectReference or = debugger.instantiateClass(className, debugger.loadClass(className).methodsByName("<init>").get(0), values);
+                if (objectItem == null) {
+                    ObjectReference or = debugger.instantiateClass(className, method, values);
                     Main.runtimeView.addObject(objectName, or);
                 }else {
                     debugger.invokeMethod(objectItem.getObjectReference(), method, values);

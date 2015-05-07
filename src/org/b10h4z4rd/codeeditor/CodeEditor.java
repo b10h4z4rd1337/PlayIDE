@@ -1,5 +1,6 @@
 package org.b10h4z4rd.codeeditor;
 
+import org.b10h4z4rd.Main;
 import org.b10h4z4rd.classviewer.ClassItem;
 
 import javax.swing.*;
@@ -142,7 +143,7 @@ public class CodeEditor extends JFrame implements ActionListener{
             save();
         }else if (e.getActionCommand().equals("Compile")){
             save();
-            classItem.compile();
+            Main.classView.compile();
         }
     }
 

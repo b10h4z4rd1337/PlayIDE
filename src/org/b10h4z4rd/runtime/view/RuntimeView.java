@@ -1,15 +1,13 @@
-package org.b10h4z4rd.runtime;
+package org.b10h4z4rd.runtime.view;
 
 import com.sun.jdi.*;
-import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import org.b10h4z4rd.Main;
 import org.b10h4z4rd.classviewer.ClassItem;
+import org.b10h4z4rd.runtime.HelperUtils;
 import org.b10h4z4rd.runtime.debugger.JVMDebugger;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,15 +20,11 @@ public class RuntimeView extends JFrame{
     private TerminalView tv;
     private Map<String, ObjectItem> objList;
 
-    public RuntimeView(File home) {
+    public RuntimeView() {
         setLayout(null);
-        debugger = new JVMDebugger(home, 7000);
+        debugger = Main.debugger;
         tv = new TerminalView();
-        try {
-            debugger.launch(tv.createNewOutputStream(), tv.createNewOutputStream());
-        } catch (IOException | InterruptedException | JVMDebugger.ConnectorNotFoundException | IllegalConnectorArgumentsException e) {
-            e.printStackTrace();
-        }
+        debugger.redirectStreams(tv.createNewOutputStream(), tv.createNewOutputStream());
 
         objList = new HashMap<>();
 
@@ -44,18 +38,12 @@ public class RuntimeView extends JFrame{
         setTitle("Java Virtual Machine");
     }
 
-    public void newObject(ClassItem classItem, String objName){
+    public void newObject(ClassItem classItem, Method constructor, String objName){
         if (!objList.containsKey(objName)) {
-            Method constructor = null;
-            try {
-                constructor = debugger.loadClass(classItem.getClassName()).methodsByName("<init>").get(0);
-            } catch (InvalidTypeException | ClassNotLoadedException | InvocationException | IncompatibleThreadStateException e) {
-                e.printStackTrace();
-            }
             if (HelperUtils.needsArguments(constructor))
-                new ParameterInputView(classItem.getClassName(), objName);
+                new ParameterInputView(classItem.getClassName(), constructor, objName);
             else {
-                ObjectItem newItem = new ObjectItem(classItem.getClassName(), objName);
+                ObjectItem newItem = new ObjectItem(classItem.getClassName(), constructor, objName);
                 objList.put(objName, newItem);
                 newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
                 add(newItem);
@@ -89,19 +77,15 @@ public class RuntimeView extends JFrame{
         return objList;
     }
 
-    public JVMDebugger getDebugger(){
-        return debugger;
-    }
-
     @Override
     public void dispose() {
         try {
-            debugger.exit();
+            debugger.restart();
         } catch (ClassNotLoadedException | IncompatibleThreadStateException | InvalidTypeException e) {
             e.printStackTrace();
         }
-        Main.runtimeView = null;
         tv.dispose();
+        Main.runtimeView = null;
         super.dispose();
     }
 }

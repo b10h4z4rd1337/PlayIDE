@@ -1,13 +1,15 @@
-package org.b10h4z4rd.runtime;
+package org.b10h4z4rd.runtime.view;
 
 import com.sun.jdi.*;
 import org.b10h4z4rd.Main;
+import org.b10h4z4rd.runtime.HelperUtils;
 import org.b10h4z4rd.runtime.debugger.JVMDebugger;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Created by Mathias on 03.05.15.
@@ -55,6 +57,7 @@ public class ObjectItem extends JPanel{
             super.mouseMoved(e);
         }
     }
+
     private class CustomMouseAdapter extends MouseAdapter{
         @Override
         public void mouseClicked(MouseEvent e) {
@@ -73,6 +76,7 @@ public class ObjectItem extends JPanel{
             }
         }
     }
+
     private class PopupActionListener implements ActionListener{
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -85,7 +89,7 @@ public class ObjectItem extends JPanel{
                     if (HelperUtils.needsArguments(m))
                         new ParameterInputView(ObjectItem.this, m);
                     else
-                        Main.runtimeView.getDebugger().invokeMethod(objectReference, methodList.get(e.getActionCommand()), new ArrayList<>());
+                        new ReturnView(Main.debugger.invokeMethod(objectReference, methodList.get(e.getActionCommand()), new ArrayList<>()));
                 } catch (InvocationException | InvalidTypeException | IncompatibleThreadStateException | ClassNotLoadedException | InterruptedException e1) {
                     e1.printStackTrace();
                 }
@@ -96,12 +100,12 @@ public class ObjectItem extends JPanel{
     private Map<String, Method> methodList;
     private ObjectReference objectReference;
 
-    public ObjectItem(String className, String objectName){
+    public ObjectItem(String className, Method method, String objectName){
         this.objectName = objectName;
-        JVMDebugger debugger = Main.runtimeView.getDebugger();
+        JVMDebugger debugger = Main.debugger;
         try {
-            objectReference = debugger.instantiateClass(className, debugger.loadClass(className).methodsByName("<init>").get(0), new ArrayList<>());
-        } catch (InvalidTypeException | ClassNotLoadedException | InterruptedException | InvocationException | IncompatibleThreadStateException e) {
+            objectReference = debugger.instantiateClass(className, method, new ArrayList<>());
+        } catch (InvalidTypeException | ClassNotLoadedException | InterruptedException e) {
             e.printStackTrace();
         }
         init();
@@ -127,31 +131,33 @@ public class ObjectItem extends JPanel{
 
         if (objectReference != null) {
             JMenuItem item;
-            java.util.List<Method> methods = objectReference.referenceType().methods();
-            methodList = HelperUtils.makeMap(HelperUtils.getMethodNames(methods), methods);
-            for (String s : methodList.keySet()) {
-                item = new JMenuItem(s);
-                item.addActionListener(new PopupActionListener());
-                popupMenu.add(item);
-            }
+            try {
+                java.util.List<Method> methods = HelperUtils.getNormalMethods(objectReference.referenceType().methods());
+                methodList = HelperUtils.makeMap(HelperUtils.methodsToString(methods), methods);
 
-            popupMenu.add(createJMenuItem("Remove"));
+                for (String s : methodList.keySet()) {
+                    item = new JMenuItem(s);
+                    item.addActionListener(new PopupActionListener());
+                    popupMenu.add(item);
+                }
+
+                JMenuItem removeItem = new JMenuItem("Remove");
+                removeItem.setForeground(Color.RED);
+                removeItem.addActionListener(new PopupActionListener());
+                popupMenu.add(removeItem);
+            } catch (ClassNotLoadedException e) {
+                e.printStackTrace();
+            }
         }else
             System.out.println("NULL");
-    }
-
-    private JMenuItem createJMenuItem(String name){
-        JMenuItem menuItem = new JMenuItem(name);
-        menuItem.addActionListener(new PopupActionListener());
-        return menuItem;
     }
 
     @Override
     public void paintComponent(Graphics g) {
         g.setColor(Color.BLACK);
-        g.fillRect(0, 0, WIDTH, HEIGHT);
+        g.fillRoundRect(0, 0, WIDTH, HEIGHT, 20, 20);
         g.setColor(Color.RED);
-        g.fillRect(2, 2, WIDTH - 4, HEIGHT - 4);
+        g.fillRoundRect(2, 2, WIDTH - 4, HEIGHT - 4, 20, 20);
         g.setColor(Color.BLACK);
         g.drawString(objectName, WIDTH / 2 - objectNameLabel.getPreferredSize().width / 2, HEIGHT / 2 - objectNameLabel.getPreferredSize().height / 2);
     }

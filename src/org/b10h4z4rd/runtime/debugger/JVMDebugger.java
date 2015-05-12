@@ -10,6 +10,8 @@ import org.b10h4z4rd.Main;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
+import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,18 +25,15 @@ public class JVMDebugger {
     private ThreadReference workerThread;
     private BreakpointRequest breakpoint;
     public static ClassType SERVER_CLASS;
-    private JavaProcessBuilder javaProcessBuilder;
+    public static Value VOID;
     private Process javaProcess;
-    private int port;
 
-    public JVMDebugger(File workingDir, int port) throws IOException, ConnectorNotFoundException, IllegalConnectorArgumentsException, InterruptedException {
-        this.port = port;
-        javaProcessBuilder = new JavaProcessBuilder();
-        javaProcessBuilder.workingDir(workingDir);
+    public JVMDebugger(File workingDir, int port) throws IOException, ConnectorNotFoundException, IllegalConnectorArgumentsException, InterruptedException, URISyntaxException {
+        JavaProcessBuilder javaProcessBuilder = new JavaProcessBuilder();
         javaProcessBuilder.classpath(workingDir);
-        javaProcessBuilder.classpath(new File("/Users/Mathias/Documents/IdeaProjects/PlayIDE/out/production/PlayIDE/"));
+        javaProcessBuilder.classpath(new File(findLibHome(), "PlayIDE"));
         javaProcessBuilder.mainClass(RuntimeServer.class.getName());
-        javaProcessBuilder.debugPort(7000);
+        javaProcessBuilder.debugPort(port);
         javaProcess = javaProcessBuilder.launch();
 
         // Give the new JVM time to set up before we attach!
@@ -51,17 +50,28 @@ public class JVMDebugger {
             throw new ConnectorNotFoundException();
 
         Map<String, Connector.Argument> params = connector.defaultArguments();
-        params.get("hostname").setValue("127.0.0.1");
+        params.get("hostname").setValue("localhost");
         params.get("port").setValue(String.valueOf(port));
         vm = connector.attach(params);
         SERVER_CLASS = (ClassType) vm.classesByName(RuntimeServer.class.getName()).get(0);
         breakpoint = vm.eventRequestManager().createBreakpointRequest(SERVER_CLASS.methodsByName("vmSuspendBreakPoint").get(0).location());
         breakpoint.enable();
         workerThread = findMainThread();
+        VOID = vm.mirrorOfVoid();
+    }
+
+    private File findLibHome() throws URISyntaxException {
+        CodeSource codeSource = Main.class.getProtectionDomain().getCodeSource();
+        return new File(codeSource.getLocation().toURI().getPath()).getParentFile();
     }
 
     public void redirectStreams(OutputStream output, OutputStream error){
         JavaProcessBuilder.redirectStreams(javaProcess, output, error);
+    }
+
+    public void sendInput(byte[] data) throws IOException {
+        JavaProcessBuilder.outputStream.write(data);
+        JavaProcessBuilder.outputStream.flush();
     }
 
     private ThreadReference findMainThread(){
@@ -104,8 +114,12 @@ public class JVMDebugger {
     }
 
     public Value invokeMethod(ObjectReference objectReference, Method method, List<Value> params) throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException, InterruptedException {
-
-        return objectReference.invokeMethod(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
+        try {
+            return objectReference.invokeMethod(workerThread, method, params, ObjectReference.INVOKE_SINGLE_THREADED);
+        }catch (InvocationException e){
+            System.err.println(e.exception().referenceType().name());
+            return null;
+        }
     }
 
     public void removeObject(ObjectReference objectReference) throws InvalidTypeException, ClassNotLoadedException {
@@ -113,8 +127,6 @@ public class JVMDebugger {
     }
 
     public void exit() throws ClassNotLoadedException, IncompatibleThreadStateException, InvalidTypeException {
-        breakpoint.enable();
-        workerThread.forceEarlyReturn(vm.mirrorOfVoid());
         vm.exit(0);
         javaProcess.destroy();
         Main.debugger = null;

@@ -14,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -93,16 +94,18 @@ public class ClassView extends JFrame {
     }
 
     private void saveProject(){
-        try {
-            if (!projectLocation.exists())
-                if (!projectLocation.createNewFile())
-                    JOptionPane.showMessageDialog(this, "Project could not be created!", "ERROR", JOptionPane.ERROR_MESSAGE);
-            FileOutputStream fos = new FileOutputStream(projectLocation);
-            new ObjectOutputStream(fos).writeObject(project);
-            fos.flush();
-            fos.close();
-        } catch (java.io.IOException e) {
-            e.printStackTrace();
+        if (project != null) {
+            try {
+                if (!projectLocation.exists())
+                    if (!projectLocation.createNewFile())
+                        JOptionPane.showMessageDialog(this, "Project could not be created!", "ERROR", JOptionPane.ERROR_MESSAGE);
+                FileOutputStream fos = new FileOutputStream(projectLocation);
+                new ObjectOutputStream(fos).writeObject(project);
+                fos.flush();
+                fos.close();
+            } catch (java.io.IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -123,7 +126,7 @@ public class ClassView extends JFrame {
                 fileChooser.addChoosableFileFilter(new javax.swing.filechooser.FileFilter() {
                     @Override
                     public boolean accept(File f) {
-                        return f.getName().toLowerCase().contains(".playproject");
+                        return f.getName().toLowerCase().contains(".playproject") || f.isDirectory();
                     }
 
                     @Override
@@ -148,27 +151,26 @@ public class ClassView extends JFrame {
     }
 
     public void initVM(){
-        if (Main.debugger == null)
+        if (Main.debugger == null) {
             try {
                 Main.debugger = new JVMDebugger(getProjectFolder(), 7000);
                 if (project != null)
                     loadClasses();
-            } catch (IOException | JVMDebugger.ConnectorNotFoundException | InterruptedException | IllegalConnectorArgumentsException e) {
+            } catch (IOException | JVMDebugger.ConnectorNotFoundException | InterruptedException | IllegalConnectorArgumentsException | URISyntaxException e) {
                 e.printStackTrace();
             }
+        }
     }
 
     public void compile(){
         if (project != null) {
             List<File> toCompile = project.getClassItemList().stream().map(ClassItem::getJavaFile).collect(Collectors.toList());
-
             try {
                 org.b10h4z4rd.runtime.Compiler.compile(toCompile);
-                loadClasses();
-            } catch (IOException e) {
+                Main.debugger.restart();
+            } catch (IOException | InvalidTypeException | IncompatibleThreadStateException | ClassNotLoadedException e) {
                 e.printStackTrace();
             }
-            initVM();
         }
     }
 
@@ -220,10 +222,12 @@ public class ClassView extends JFrame {
     public void dispose() {
         saveProject();
         super.dispose();
-        try {
-            Main.debugger.exit();
-        } catch (ClassNotLoadedException | IncompatibleThreadStateException | InvalidTypeException e) {
-            e.printStackTrace();
+        if (Main.debugger != null) {
+            try {
+                Main.debugger.exit();
+            } catch (ClassNotLoadedException | IncompatibleThreadStateException | InvalidTypeException e) {
+                e.printStackTrace();
+            }
         }
         System.exit(0);
     }

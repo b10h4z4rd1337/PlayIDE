@@ -90,7 +90,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ ext-dirs ]---------------------------------------------------*/
 
-    private List<File> extDirs = new ArrayList<File>();
+    private List<File> extDirs = new ArrayList<>();
 
     public JavaProcessBuilder extDir(String dir){
         return extDir(new File(dir));
@@ -107,7 +107,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ library-path ]---------------------------------------------------*/
 
-    private List<File> libraryPath = new ArrayList<File>();
+    private List<File> libraryPath = new ArrayList<>();
 
     public JavaProcessBuilder libraryPath(String dir){
         return libraryPath(new File(dir));
@@ -124,7 +124,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ boot-classpath ]---------------------------------------------------*/
 
-    private List<File> bootClasspath = new ArrayList<File>();
+    private List<File> bootClasspath = new ArrayList<>();
 
     public JavaProcessBuilder bootClasspath(String resource){
         return bootClasspath(new File(resource));
@@ -141,7 +141,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ append-boot-classpath ]---------------------------------------------------*/
 
-    private List<File> appendBootClasspath = new ArrayList<File>();
+    private List<File> appendBootClasspath = new ArrayList<>();
 
     public JavaProcessBuilder appendBootClasspath(String resource){
         return appendBootClasspath(new File(resource));
@@ -158,7 +158,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ prepend-boot-classpath ]---------------------------------------------------*/
 
-    private List<File> prependBootClasspath = new ArrayList<File>();
+    private List<File> prependBootClasspath = new ArrayList<>();
 
     public JavaProcessBuilder prependBootClasspath(String resource){
         return prependBootClasspath(new File(resource));
@@ -175,7 +175,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ system-properties ]---------------------------------------------------*/
 
-    private Map<String, String> systemProperties = new HashMap<String, String>();
+    private Map<String, String> systemProperties = new HashMap<>();
 
     public JavaProcessBuilder systemProperty(String name, String value){
         systemProperties.put(name, value);
@@ -244,7 +244,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ jvm-args ]---------------------------------------------------*/
 
-    private List<String> jvmArgs = new ArrayList<String>();
+    private List<String> jvmArgs = new ArrayList<>();
 
     public JavaProcessBuilder jvmArg(String arg){
         jvmArgs.add(arg);
@@ -294,7 +294,7 @@ public class JavaProcessBuilder{
 
     /*-------------------------------------------------[ arguments ]---------------------------------------------------*/
 
-    private List<String> args = new ArrayList<String>();
+    private List<String> args = new ArrayList<>();
 
     public JavaProcessBuilder arg(String arg){
         args.add(arg);
@@ -406,7 +406,7 @@ public class JavaProcessBuilder{
 
     /** Returns command with all its arguments */
     public String[] command() throws IOException{
-        List<String> cmd = new ArrayList<String>();
+        List<String> cmd = new ArrayList<>();
 
         String executable = javaHome.getCanonicalPath()+File.separator+"bin"+File.separator+"java";
         if(System.getProperty("os.name").toLowerCase().contains("windows"))
@@ -479,7 +479,8 @@ public class JavaProcessBuilder{
             byte[] buffer = new byte[1024];
             int len;
             InputStream is = process.getInputStream();
-            try{
+            try {
+                len = is.read(buffer);
                 while ((len = is.read(buffer)) != -1)
                     output.write(buffer, 0, len);
             } catch (IOException e) {
@@ -490,12 +491,15 @@ public class JavaProcessBuilder{
             byte[] buffer = new byte[1024];
             int len;
             InputStream is = process.getErrorStream();
-            try{
+            try {
                 while ((len = is.read(buffer)) != -1)
                     error.write(buffer, 0, len);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }).start();
+        outputStream = process.getOutputStream();
     }
+
+    public static OutputStream outputStream;
 }

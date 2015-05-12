@@ -33,7 +33,23 @@ public class HelperUtils {
     }
 
     public static List<Method> getConstructors(List<Method> methods){
-        return methods.stream().filter(m -> m.name().contains("<init>")).collect(Collectors.toList());
+        return methods.stream().filter(Method::isConstructor).collect(Collectors.toList());
+    }
+
+    public static List<String> constructorsToString(List<Method> methods){
+        List<String> result = new ArrayList<>();
+        StringBuilder sb;
+        for (Method m : methods) {
+            sb = new StringBuilder();
+            List<String> argsTypes = m.argumentTypeNames();
+            for (int i = 0; i < argsTypes.size(); i++) {
+                sb.append(getSimpleName(argsTypes.get(i)));
+                if (i + 1 != argsTypes.size())
+                    sb.append(", ");
+            }
+            result.add(m.declaringType().name() + "(" + sb.toString() + ")");
+        }
+        return result;
     }
 
     public static List<String> methodsToString(List<Method> methods){

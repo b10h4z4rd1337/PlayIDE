@@ -83,7 +83,12 @@ public class ParameterInputView extends JFrame {
             data[i][1] = "";
         }
 
-        JTable params = new JTable(data, heads);
+        JTable params = new JTable(data, heads){
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column != 0;
+            }
+        };
         params.setShowGrid(true);
 
         getContentPane().add(params.getTableHeader(), BorderLayout.PAGE_START);
@@ -125,25 +130,36 @@ public class ParameterInputView extends JFrame {
             try {
                 List<Value> values = new ArrayList<>(data.length);
                 for (int i = 0; i < data.length; i++) {
-                    boolean isCustomObject = false;
-                    for (String objName : Main.runtimeView.getObjList().keySet())
-                        if (objName.equals(data[i][1])) {
-                            values.add(Main.runtimeView.getObjList().get(objName).getObjectReference());
-                            isCustomObject = true;
+                    if (!((String) data[i][1]).isEmpty()) {
+                        boolean isCustomObject = false;
+                        for (String objName : Main.runtimeView.getObjList().keySet())
+                            if (objName.equals(data[i][1])) {
+                                values.add(Main.runtimeView.getObjList().get(objName).getObjectReference());
+                                isCustomObject = true;
+                            }
+
+                        if (!isCustomObject)
+                            values.add(debugger.stringToValue(Class.forName(classes.get(i)), (String) data[i][1]));
+                    }else {
+                        return;
+                    }
+                }
+
+                new Thread(() -> {
+                    try {
+                        if (objectItem == null) {
+                            ObjectReference or = debugger.instantiateClass(className, method, values);
+                            Main.runtimeView.addObject(objectName, or);
+                        }else {
+                            new ReturnView(debugger.invokeMethod(objectItem.getObjectReference(), method, values));
                         }
+                    } catch (InvocationException | InvalidTypeException | IncompatibleThreadStateException | ClassNotLoadedException | InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }).start();
 
-                    if (!isCustomObject)
-                        values.add(debugger.stringToValue(Class.forName(classes.get(i)), (String) data[i][1]));
-                }
-
-                if (objectItem == null) {
-                    ObjectReference or = debugger.instantiateClass(className, method, values);
-                    Main.runtimeView.addObject(objectName, or);
-                }else {
-                    debugger.invokeMethod(objectItem.getObjectReference(), method, values);
-                }
                 ParameterInputView.this.dispose();
-            } catch (InterruptedException | InvalidTypeException | ClassNotLoadedException | InvocationException | IncompatibleThreadStateException | ClassNotFoundException e1) {
+            } catch ( ClassNotFoundException e1) {
                 e1.printStackTrace();
             }
         }

@@ -32,7 +32,7 @@ public class CodeEditor extends JFrame implements ActionListener{
         // Set Tab Size
         FontMetrics fm = editor.getFontMetrics( editor.getFont() );
         int charWidth = fm.charWidth( 'w' );
-        int tabWidth = charWidth * 4;
+        int tabWidth = charWidth * 2;
 
         TabStop[] tabs = new TabStop[10];
 
@@ -68,6 +68,7 @@ public class CodeEditor extends JFrame implements ActionListener{
         setSize(600, 600);
         add(menu, BorderLayout.NORTH);
         add(new JScrollPane(editor), BorderLayout.CENTER);
+        setLocationRelativeTo(null);
         setVisible(true);
         setTitle(classItem.getJavaFile().getName());
     }

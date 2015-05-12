@@ -83,16 +83,18 @@ public class ObjectItem extends JPanel{
             if (e.getActionCommand().equals("Remove")){
                 Main.runtimeView.removeObject(ObjectItem.this);
             }else {
-                try {
-                    //Invoke Method
-                    Method m = methodList.get(e.getActionCommand());
-                    if (HelperUtils.needsArguments(m))
-                        new ParameterInputView(ObjectItem.this, m);
-                    else
-                        new ReturnView(Main.debugger.invokeMethod(objectReference, methodList.get(e.getActionCommand()), new ArrayList<>()));
-                } catch (InvocationException | InvalidTypeException | IncompatibleThreadStateException | ClassNotLoadedException | InterruptedException e1) {
-                    e1.printStackTrace();
-                }
+                new Thread(() -> {
+                    try {
+                        //Invoke Method
+                        Method m = methodList.get(e.getActionCommand());
+                        if (HelperUtils.needsArguments(m))
+                            new ParameterInputView(ObjectItem.this, m);
+                        else
+                            new ReturnView(Main.debugger.invokeMethod(objectReference, methodList.get(e.getActionCommand()), new ArrayList<>()));
+                    } catch (InvocationException | InvalidTypeException | IncompatibleThreadStateException | ClassNotLoadedException | InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }).start();
             }
         }
     }

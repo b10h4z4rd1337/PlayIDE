@@ -1,3 +1,5 @@
 Manifest-Version: 1.0
 Main-Class: org.b10h4z4rd.Main
+Class-Path: tools.jar
+Implementation-Title: PlayIDE
 

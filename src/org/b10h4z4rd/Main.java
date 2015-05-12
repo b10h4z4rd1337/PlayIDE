@@ -15,8 +15,4 @@ public class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> classView = new ClassView());
     }
-
-    public static void Print(Object toPrint){
-        System.out.println(toPrint);
-    }
 }

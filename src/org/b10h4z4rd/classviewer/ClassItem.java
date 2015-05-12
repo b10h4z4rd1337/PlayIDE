@@ -24,7 +24,6 @@ public class ClassItem extends JPanel{
     transient private JLabel classNameLabel;
     transient Map<String, Method> constructorList;
 
-    transient private JPopupMenu popupMenu;
     transient private PopupActionListener popupActionListener;
     transient private int pressedX, pressedY;
 
@@ -49,14 +48,7 @@ public class ClassItem extends JPanel{
         classNameLabel.setLocation(WIDTH / 2, HEIGHT / 2);
         add(classNameLabel);
 
-        popupMenu = new JPopupMenu();
         popupActionListener = new PopupActionListener();
-
-        JMenuItem item = new JMenuItem("Remove");
-        item.setForeground(Color.RED);
-        item.addActionListener(popupActionListener);
-        popupMenu.add(item);
-
         addMouseListener(new CustomMouseAdapter());
         addMouseMotionListener(new PanelMover());
     }
@@ -65,33 +57,30 @@ public class ClassItem extends JPanel{
         try {
             ClassType ct = Main.debugger.loadClass(className);
             java.util.List<Method> constructors = HelperUtils.getConstructors(ct.methods());
-            constructorList = HelperUtils.makeMap(HelperUtils.methodsToString(constructors), constructors);
-            popupMenu = new JPopupMenu();
-
-            JMenuItem item;
-            for (String s : constructorList.keySet()) {
-                item = new JMenuItem(s);
-                item.addActionListener(popupActionListener);
-                popupMenu.add(item);
-            }
-            item = new JMenuItem("Remove");
-            item.setForeground(Color.RED);
-            item.addActionListener(popupActionListener);
-            popupMenu.add(item);
+            constructorList = HelperUtils.makeMap(HelperUtils.constructorsToString(constructors), constructors);
         } catch (InvocationException | InvalidTypeException | ClassNotLoadedException | IncompatibleThreadStateException e) {
             e.printStackTrace();
         }
     }
 
+    public Set<String> getMethodNames(){
+        if (constructorList != null)
+            return constructorList.keySet();
+        return new HashSet<>();
+    }
+
     private void delete() {
-        if (!javaFile.delete()) {
-            JOptionPane.showMessageDialog(null, "Failed to remove!", "ERROR", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (!new File(Main.classView.getProjectFolder(), className + ".class").delete()) {
-            JOptionPane.showMessageDialog(null, "Failed to remove!", "ERROR", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        if (javaFile.exists())
+            if (!javaFile.delete()) {
+                JOptionPane.showMessageDialog(null, "Failed to remove!", "ERROR", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        File byteFile = new File(Main.classView.getProjectFolder(), className + ".class");
+        if (byteFile.exists())
+            if (!byteFile.delete()) {
+                JOptionPane.showMessageDialog(null, "Failed to remove!", "ERROR", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         Main.classView.removeItem(this);
     }
 
@@ -99,7 +88,7 @@ public class ClassItem extends JPanel{
         new org.b10h4z4rd.codeeditor.CodeEditor(this);
     }
 
-    private class PopupActionListener implements ActionListener {
+    public class PopupActionListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (e.getActionCommand().equals("Remove")){
@@ -163,7 +152,7 @@ public class ClassItem extends JPanel{
             if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 2) {
                 openCoderFrame();
             }else if (e.getButton() == MouseEvent.BUTTON3){
-                popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                new ConstructorPopup(ClassItem.this, popupActionListener).show(e.getComponent(), e.getX(), e.getY());
             }
         }
 

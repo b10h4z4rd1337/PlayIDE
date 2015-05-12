@@ -1,6 +1,7 @@
 package org.b10h4z4rd.runtime.view;
 
 import com.sun.jdi.Value;
+import org.b10h4z4rd.runtime.debugger.JVMDebugger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,6 +12,8 @@ import java.awt.*;
 public class ReturnView extends JFrame {
 
     public ReturnView(Value value){
+        if (value.equals(JVMDebugger.VOID))
+            return;
         String[] splitted = value.type().name().split("\\.");
         String type = splitted[splitted.length - 1];
         JLabel valueLabel = new JLabel(type + ": " + value.toString());
@@ -25,5 +28,4 @@ public class ReturnView extends JFrame {
         setTitle("Return");
         setVisible(true);
     }
-
 }

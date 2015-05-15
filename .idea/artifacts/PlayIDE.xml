@@ -7,6 +7,7 @@
       </element>
       <element id="module-output" name="PlayIDE" />
       <element id="library" level="project" name="tools" />
+      <element id="file-copy" path="$PROJECT_DIR$/src/Duke_Blocks.png" />
     </root>
   </artifact>
 </component>

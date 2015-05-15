@@ -36,6 +36,8 @@ public class ParameterInputView extends JFrame {
         } catch (InvalidTypeException | ClassNotLoadedException | InterruptedException | InvocationException | IncompatibleThreadStateException e) {
             e.printStackTrace();
         }
+        if (Main.icon != null)
+            setIconImage(Main.icon);
         setTitle("Instantiate Class");
     }
 

@@ -23,7 +23,6 @@ public class JVMDebugger {
 
     private VirtualMachine vm;
     private ThreadReference workerThread;
-    private BreakpointRequest breakpoint;
     public static ClassType SERVER_CLASS;
     public static Value VOID;
     private Process javaProcess;
@@ -31,7 +30,7 @@ public class JVMDebugger {
     public JVMDebugger(File workingDir, int port) throws IOException, ConnectorNotFoundException, IllegalConnectorArgumentsException, InterruptedException, URISyntaxException {
         JavaProcessBuilder javaProcessBuilder = new JavaProcessBuilder();
         javaProcessBuilder.classpath(workingDir);
-        javaProcessBuilder.classpath(new File(findLibHome(), "PlayIDE"));
+        javaProcessBuilder.classpath(findLibHome());
         javaProcessBuilder.mainClass(RuntimeServer.class.getName());
         javaProcessBuilder.debugPort(port);
         javaProcess = javaProcessBuilder.launch();
@@ -54,7 +53,7 @@ public class JVMDebugger {
         params.get("port").setValue(String.valueOf(port));
         vm = connector.attach(params);
         SERVER_CLASS = (ClassType) vm.classesByName(RuntimeServer.class.getName()).get(0);
-        breakpoint = vm.eventRequestManager().createBreakpointRequest(SERVER_CLASS.methodsByName("vmSuspendBreakPoint").get(0).location());
+        BreakpointRequest breakpoint = vm.eventRequestManager().createBreakpointRequest(SERVER_CLASS.methodsByName("vmSuspendBreakPoint").get(0).location());
         breakpoint.enable();
         workerThread = findMainThread();
         VOID = vm.mirrorOfVoid();

@@ -9,8 +9,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by Mathias on 01.05.15.
@@ -33,10 +36,28 @@ public class ClassItem extends JPanel{
         try {
             if (!javaFile.createNewFile())
                 JOptionPane.showMessageDialog(null, "Could not create File", "ERROR", JOptionPane.ERROR_MESSAGE);
+            else
+                createStandard();
         } catch (IOException e) {
             e.printStackTrace();
         }
         initControls();
+    }
+
+    private void createStandard() throws IOException {
+        FileOutputStream fos = new FileOutputStream(javaFile);
+        byte[] data = (
+                "import java.util.Scanner;\n\n" +
+                "public class " + className + " {\n" +
+                "   //Method to read from Console and return it\n" +
+                "   public String readInput(){\n"+
+                "       return new Scanner(System.in).nextLine();\n" +
+                "   }\n" +
+                "}"
+                ).getBytes();
+        fos.write(data);
+        fos.flush();
+        fos.close();
     }
 
     public void initControls(){

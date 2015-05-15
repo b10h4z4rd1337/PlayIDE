@@ -22,20 +22,22 @@ public class RuntimeView extends JFrame{
 
     public RuntimeView() {
         setLayout(null);
+        objList = new HashMap<>();
+        getContentPane().setBackground(Color.WHITE);
+
         debugger = Main.debugger;
         tv = new TerminalView();
         debugger.redirectStreams(tv.createNewOutputStream(), tv.createNewOutputStream());
 
-        objList = new HashMap<>();
-
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setSize(600, 400);
-        getContentPane().setBackground(Color.WHITE);
         setResizable(false);
         setLocationRelativeTo(null);
-        setVisible(true);
-        setAutoRequestFocus(true);
+        if (Main.icon != null)
+            setIconImage(Main.icon);
         setTitle("Java Virtual Machine");
+        setAutoRequestFocus(true);
+        setVisible(true);
     }
 
     public void newObject(ClassItem classItem, Method constructor, String objName){
@@ -46,8 +48,8 @@ public class RuntimeView extends JFrame{
                 ObjectItem newItem = new ObjectItem(classItem.getClassName(), constructor, objName);
                 objList.put(objName, newItem);
                 newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
-                add(newItem);
-                repaint();
+                getContentPane().add(newItem);
+                getContentPane().repaint();
             }
         }else {
             JOptionPane.showMessageDialog(null, "An Object with this name already exists!", "ERROR", JOptionPane.ERROR_MESSAGE);
@@ -58,8 +60,8 @@ public class RuntimeView extends JFrame{
         ObjectItem newItem = new ObjectItem(objName, or);
         objList.put(objName, newItem);
         newItem.setLocation(600 / 2 - ObjectItem.WIDTH / 2, 400 / 2 - ObjectItem.HEIGHT + 25);
-        add(newItem);
-        repaint();
+        getContentPane().add(newItem);
+        getContentPane().repaint();
     }
 
     public void removeObject(ObjectItem objectItem){

@@ -1,6 +1,7 @@
 package org.b10h4z4rd.runtime.view;
 
 import com.sun.jdi.Value;
+import org.b10h4z4rd.Main;
 import org.b10h4z4rd.runtime.debugger.JVMDebugger;
 
 import javax.swing.*;
@@ -21,11 +22,13 @@ public class ReturnView extends JFrame {
         getContentPane().setLayout(new GridBagLayout());
         getContentPane().add(valueLabel, new GridBagConstraints());
         getContentPane().setBackground(Color.WHITE);
-        getContentPane().setPreferredSize(new Dimension(valueLabel.getPreferredSize().width + 10, valueLabel.getPreferredSize().height + 10));
+        getContentPane().setPreferredSize(new Dimension(valueLabel.getPreferredSize().width + 20, valueLabel.getPreferredSize().height + 20));
         pack();
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setTitle("Return");
+        if (Main.icon != null)
+            setIconImage(Main.icon);
         setVisible(true);
     }
 }

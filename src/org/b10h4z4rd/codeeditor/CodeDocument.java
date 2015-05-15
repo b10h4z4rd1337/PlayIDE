@@ -4,7 +4,6 @@ import javax.swing.text.*;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
 * Created by Mathias on 01.05.15.
@@ -323,8 +322,7 @@ public class CodeDocument extends DefaultStyledDocument {
         }
     }
 
-    private void processChar(String str) {
-        char strChar = str.charAt(0);
+    private void processChar(char strChar) {
         if (mode != COMMENT_MODE && mode != LINE_COMMENT_MODE
                 && mode != JAVADOC_MODE && mode != ANNOTATION_MODE) {
             mode = TEXT_MODE;
@@ -354,7 +352,7 @@ public class CodeDocument extends DefaultStyledDocument {
             }
             break;
             case ('"'): {
-                insertTextString(str, currentPos);
+                insertTextString(String.valueOf(strChar), currentPos);
                 this.checkForString();
             }
             break;
@@ -381,26 +379,19 @@ public class CodeDocument extends DefaultStyledDocument {
             this.checkForString();
         }
         if (mode == STRING_MODE) {
-            insertTextString(str, this.currentPos);
+            insertTextString(String.valueOf(strChar), this.currentPos);
         } else if (mode == NUMBER_MODE) {
-            insertNumberString(str, this.currentPos);
+            insertNumberString(String.valueOf(strChar), this.currentPos);
         } else if (mode == COMMENT_MODE) {
-            insertCommentString(str, this.currentPos);
+            insertCommentString(String.valueOf(strChar), this.currentPos);
         } else if (mode == LINE_COMMENT_MODE) {
-            insertCommentString(str, this.currentPos);
+            insertCommentString(String.valueOf(strChar), this.currentPos);
         } else if (mode == JAVADOC_MODE) {
-            insertJavadocString(str, this.currentPos);
+            insertJavadocString(String.valueOf(strChar), this.currentPos);
         } else if (mode == ANNOTATION_MODE) {
-            insertAnnotationString(str, this.currentPos);
+            insertAnnotationString(String.valueOf(strChar), this.currentPos);
         }
 
-    }
-
-    private void processChar(char strChar) {
-        char[] chrstr = new char[1];
-        chrstr[0] = strChar;
-        String str = new String(chrstr);
-        processChar(str);
     }
 
     @Override
@@ -416,10 +407,7 @@ public class CodeDocument extends DefaultStyledDocument {
             processChar(str.charAt(strpos));
         }
         currentPos = offs;
-    }
 
-    public Set<String> getKeywords() {
-        return this.keywordSets.keySet();
     }
 
     public void setKeywords(Map<String, Color> aKeywordList) {
@@ -430,7 +418,6 @@ public class CodeDocument extends DefaultStyledDocument {
                 StyleConstants.setBold(temp, true);
                 this.keywordSets.put(entry.getKey(), temp);
             }
-            // this.keywords = aKeywordList;
         }
     }
 }

@@ -69,22 +69,26 @@ public class CodeEditor extends JFrame implements ActionListener{
         add(menu, BorderLayout.NORTH);
         add(new JScrollPane(editor), BorderLayout.CENTER);
         setLocationRelativeTo(null);
-        setVisible(true);
+        if (Main.icon != null)
+            setIconImage(Main.icon);
         setTitle(classItem.getJavaFile().getName());
+        setVisible(true);
     }
 
     private void initCodeArea(){
-        CodeDocument doc = new CodeDocument();
-        Map<String,Color> keywords = new HashMap<String,Color>();
+        CodeDocumentV2 doc = new CodeDocumentV2(editor);
+        Map<String,Color> keywords = new HashMap<>();
 
         Color comment = new Color(63,197,95);
         Color javadoc = new Color(63,95,191);
         Color annotation = new Color(100,100,100);
+        /*
         doc.setCommentColor(comment);
         doc.setJavadocColor(javadoc);
         doc.setAnnotationColor(annotation);
+        */
 
-        Color defColor = new Color(127,0,85);
+        Color defColor = Color.ORANGE;
         keywords.put("abstract",defColor);
         keywords.put("boolean",defColor);
         keywords.put("break",defColor);

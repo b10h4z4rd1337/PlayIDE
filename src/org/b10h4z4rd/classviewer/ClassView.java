@@ -58,6 +58,8 @@ public class ClassView extends JFrame {
         setSize(600, 400);
         setResizable(false);
         setLocationRelativeTo(null);
+        if (Main.icon != null)
+            setIconImage(Main.icon);
         setVisible(true);
     }
 
@@ -112,7 +114,7 @@ public class ClassView extends JFrame {
     private class MenuActionListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            JFileChooser fileChooser = new JFileChooser();
+            JFileChooser fileChooser = new JFileChooser(new File(System.getProperty("user.home"), "Desktop"));
             if (e.getActionCommand().equals(NEW_PROJECT)){
                 fileChooser.showDialog(ClassView.this, "Create");
                 if (fileChooser.getSelectedFile() != null) {
@@ -135,17 +137,34 @@ public class ClassView extends JFrame {
                     }
                 });
                 fileChooser.setAcceptAllFileFilterUsed(false);
+                fileChooser.addActionListener(e1 -> {
+                    if (e1.getActionCommand().equals("ApproveSelection"))
+                        if (fileChooser.getSelectedFile().exists()) {
+                            projectLocation = fileChooser.getSelectedFile();
+                            initVM();
+                            loadProject(fileChooser.getSelectedFile());
+                            setTitle(fileChooser.getSelectedFile().getName());
+                        }
+                });
+                disableInput(fileChooser);
                 fileChooser.showDialog(ClassView.this, "Open");
-                if (fileChooser.getSelectedFile() != null) {
-                    projectLocation = fileChooser.getSelectedFile();
-                    initVM();
-                    loadProject(fileChooser.getSelectedFile());
-                    setTitle(fileChooser.getSelectedFile().getName());
-                }
             }else if (e.getActionCommand().equals(SAVE_PROJECT)){
                 saveProject();
             }else if (e.getActionCommand().equals(COMPILE_PROJECT)){
                 compile();
+            }
+        }
+    }
+
+    private void disableInput(Container container){
+        Component[] c = container.getComponents();
+        for (Component component : c) {
+            if (component.getClass().getName().equals(JTextField.class.getName())) {
+                component.setEnabled(false);
+                return;
+            }
+            if (((Container) component).getComponentCount() > 0) {
+                disableInput((Container) component);
             }
         }
     }

@@ -46,8 +46,10 @@ public class TerminalView extends JFrame {
 
         setSize(400, 400);
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        setVisible(true);
+        if (Main.icon != null)
+            setIconImage(Main.icon);
         setTitle("Terminal");
+        setVisible(true);
     }
 
     public TerminalOutputStream createNewOutputStream(){
